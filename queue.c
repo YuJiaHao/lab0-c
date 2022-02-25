@@ -273,8 +273,58 @@ void q_reverse(struct list_head *head)
 }
 
 /*
+ * merge elements of two lists in ascending order into a list
+ * return entry pointer for sorted list.
+ */
+void list_merge(struct list_head *entry1,
+                struct list_head *entry2,
+                struct list_head *sorted)
+{
+    while (!list_empty(entry1) && !list_empty(entry2)) {
+        struct list_head *node =
+            (strcmp(list_entry(entry1->next, element_t, list)->value,
+                    list_entry(entry2->next, element_t, list)->value) <= 0)
+                ? entry1->next
+                : entry2->next;
+        list_move_tail(node, sorted);
+    }
+    list_splice_tail(list_empty(entry1) ? entry2 : entry1, sorted);
+}
+
+/*
+ */
+void list_merge_sort(struct list_head *entry)
+{
+    if (list_empty(entry) || list_is_singular(entry))
+        return;
+
+    struct list_head left;
+    struct list_head sorted;
+    INIT_LIST_HEAD(&left);
+    INIT_LIST_HEAD(&sorted);
+
+    // Find mid node in list
+    struct list_head **indir = &(entry->next);
+    for (struct list_head *fast = entry->next;
+         fast != entry && fast->next != entry; fast = fast->next->next)
+        indir = &(*indir)->next;
+
+    list_cut_position(&left, entry, (*indir)->prev);
+    list_merge_sort(&left);
+    list_merge_sort(entry);
+    list_merge(&left, entry, &sorted);
+    INIT_LIST_HEAD(entry);
+    list_splice_tail(&sorted, entry);
+}
+
+/*
  * Sort elements of queue in ascending order
  * No effect if q is NULL or empty. In addition, if q has only one
  * element, do nothing.
  */
-void q_sort(struct list_head *head) {}
+void q_sort(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    list_merge_sort(head);
+}
